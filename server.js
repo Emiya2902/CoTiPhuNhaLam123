@@ -10,7 +10,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 
 // Shared game logic (works on both server & client)
-const { createGame, applyAction } = require('gameServer.js');
+const { createGame, applyAction } = require('./shared/gameServer.js');
 
 const app = express();
 app.use(express.static(path.join(__dirname, '.')));
@@ -55,23 +55,6 @@ function broadcastRoomState(roomCode) {
     currentPlayerIndex: state.currentPlayerIndex
   });
 }
-
-// Auction timeouts are server-authoritative so every client sees the same
-// five-second turn and no client can keep an auction open indefinitely.
-setInterval(() => {
-  for (const [roomCode, room] of rooms.entries()) {
-    const auction = room.game && room.game.state.auctionState;
-    if (!auction || !auction.active || Date.now() < auction.timerEnd) continue;
-    const bidder = room.game.getCurrentAuctionBidder();
-    const bidderIndex = bidder
-      ? room.game.state.players.findIndex(player => player.id === bidder.id)
-      : -1;
-    if (bidderIndex >= 0) {
-      room.game.action.passBid(bidderIndex);
-      broadcastRoomState(roomCode);
-    }
-  }
-}, 200);
 
 // =========================================================
 // SOCKET.IO HANDLERS
